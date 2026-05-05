@@ -1,20 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, MessageCircle, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, MessageCircle, ChevronDown, Loader2, Plus, Edit, LogOut, PawPrint, Users, Home, Info } from 'lucide-react';
 import './Pets.css';
 import { Link } from 'react-router-dom'
 
-// Estrutura correta da API de Adoções (Porta 3333)
 interface AdoptionFromAPI {
-    id?: number | string;
+    id: number | string;
+    protocolo: string;
     idPet: number;
-    nome: string;
-    telefone: string;
-    moradia: string;
-    condicao: string;
-    pessoas: number;
-    motivo: string;
-    status?: string;
-    criadoEm?: string;
+    solicitante: {
+        nomeCompleto: string;
+        telefone: string;
+        tipoMoradia: string;
+        condicaoImovel: string;
+        numeroResidentes: number;
+    };
+    motivoAdocao: string;
+    status: string;
+    criadoEm: string;
+    atualizadoEm: string;
 }
 
 interface PetFromAPI {
@@ -72,14 +75,12 @@ export default function Pets() {
                 setLoading(true);
                 setError(null);
 
-                // 1. Busca Pets (Porta 3000)
                 const petsResponse = await fetch('http://localhost:3000/api/admin/pets');
                 if (!petsResponse.ok) throw new Error('Erro ao buscar pets');
                 const petsData = await petsResponse.json();
                 const petsArray = Array.isArray(petsData) ? petsData : petsData.pets || [];
                 setPets(petsArray.map(mapPetFromAPI));
 
-                // 2. Busca Adoções (Porta 3333)
                 const adoptionsResponse = await fetch('http://localhost:3000/api/adoptions');
                 if (adoptionsResponse.ok) {
                     const adoptionsData = await adoptionsResponse.json();
@@ -113,7 +114,6 @@ export default function Pets() {
         window.open(whatsappUrl, '_blank');
     };
 
-    // Função para pegar adoções de um pet específico pelo ID
     const getPetAdoptions = (petId: string) => {
         return adoptions.filter(a => String(a.idPet) === petId);
     };
@@ -121,171 +121,237 @@ export default function Pets() {
     if (loading) {
         return (
             <div className="pets-loading">
-                <div className="pets-loading-content">
-                    <Loader2 className="pets-loading-spinner" />
-                    <p className="pets-loading-text">Carregando dados...</p>
-                </div>
+                <Loader2 className="pets-loading-spinner" />
+                <p>Carregando painel administrativo...</p>
             </div>
         );
     }
 
     return (
-        <div className="pets-container">
-            <header className="pets-header">
-                <div className="pets-header-content">
-                    <div className="pets-header-top">
-                        <h1 className="pets-header-title">Pets Cadastrados</h1>
-                        <div className="pets-header-buttons">
-                            <Link to="/pets/novo" className="pets-header-button">Novo</Link>
-                            <Link to="/pets/editar" className="pets-header-button">Editar</Link>
-                            <button
-                                className="pets-header-button"
-                                onClick={() => {
-                                    localStorage.removeItem('employee');
-                                    localStorage.removeItem('isAuthenticated');
-                                    window.location.href = '/login';
-                                }}
-                            >
-                                Sair
-                            </button>
-                        </div>
-                    </div>
+        <div className="admin-layout">
+            {/* Sidebar - Menu à Esquerda */}
+            <aside className="sidebar">
+                <div className="sidebar-logo">
+                    <PawPrint size={32} className="logo-icon" />
+                    <span>PetAdopt Admin</span>
                 </div>
-            </header>
+                
+                <nav className="sidebar-nav">
+                    <Link to="/pets" className="nav-item active">
+                        <Home size={20} /> Painel Principal
+                    </Link>
+                    <Link to="/pets/novo" className="nav-item">
+                        <Plus size={20} /> Novo Pet
+                    </Link>
+                </nav>
 
-            <main className="pets-main">
-                {error && <div className="pets-error"><p>{error}</p></div>}
+                <div className="sidebar-footer">
+                    <button className="logout-button" onClick={() => {
+                        localStorage.removeItem('employee');
+                        localStorage.removeItem('isAuthenticated');
+                        window.location.href = '/login';
+                    }}>
+                        <LogOut size={20} /> Sair
+                    </button>
+                </div>
+            </aside>
 
-                <div className="pets-search-filters">
-                    <div className="pets-search-wrapper">
-                        <Search className="pets-search-icon" />
+            {/* Main Content */}
+            <main className="main-content">
+                <header className="content-header">
+                    <div>
+                        <h1>Gerenciamento de Pets</h1>
+                        <p>Acompanhe os pets cadastrados e as solicitações de adoção.</p>
+                    </div>
+                    
+                    <div className="header-search">
+                        <Search size={18} className="search-icon" />
                         <input
                             type="text"
-                            placeholder="Pesquisar por nome..."
+                            placeholder="Buscar pet pelo nome..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pets-search-input"
                         />
                     </div>
-                    <div className="pets-filter-badges">
-                        {(['all', 'cats', 'dogs'] as const).map((type) => (
-                            <button
-                                key={type}
-                                onClick={() => setFilterType(type)}
-                                className={`pets-filter-badge ${filterType === type ? 'active' : ''}`}
-                            >
-                                {type === 'all' ? 'Todos' : type === 'cats' ? 'Gatos' : 'Cães'}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                </header>
 
-                <div className="pets-grid-section">
-                    <h2 className="pets-grid-title">Listagem de Pets ({filteredPets.length})</h2>
-                    <div className="pets-grid">
-                        {filteredPets.map((pet) => {
-                            const petAdoptions = getPetAdoptions(pet.id);
-                            return (
-                                <div key={pet.id} className="pet-card-wrapper">
-                                    <div className="pet-card">
-                                        <div className="pet-card-image">
-                                            <img src={pet.image} alt={pet.name} onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400&h=400&fit=crop'; }} />
+                <section className="filters-section">
+                    <div className="filter-group">
+                        <button onClick={() => setFilterType('all')} className={filterType === 'all' ? 'active' : ''}>Todos</button>
+                        <button onClick={() => setFilterType('dogs')} className={filterType === 'dogs' ? 'active' : ''}>Cães</button>
+                        <button onClick={() => setFilterType('cats')} className={filterType === 'cats' ? 'active' : ''}>Gatos</button>
+                    </div>
+                    <div className="stats-badge">
+                        {filteredPets.length} pets encontrados
+                    </div>
+                </section>
+
+                {error && <div className="error-banner">{error}</div>}
+
+                <div className="pets-grid">
+                    {filteredPets.map((pet) => {
+                        const petAdoptions = getPetAdoptions(pet.id);
+                        const isExpanded = expandedPetId === pet.id;
+
+                        return (
+                            <div key={pet.id} className={`pet-card-container ${isExpanded ? 'expanded' : ''}`}>
+                                <div className="pet-card-main">
+                                    <div className="pet-image-wrapper">
+                                        <img src={pet.image} alt={pet.name} onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400&h=400&fit=crop'; }} />
+                                    </div>
+                                    
+                                    <div className="pet-info-content">
+                                        <div className="pet-info-header">
+                                            <h3>{pet.name}</h3>
+                                            <span className={`type-tag ${pet.type}`}>{pet.type === 'dog' ? 'Cão' : 'Gato'}</span>
                                         </div>
-                                        <div className="pet-card-info">
-                                            <h3 className="pet-card-name">{pet.name}</h3>
-                                            <p className="pet-card-breed">{pet.breed} • {pet.age}</p>
-                                        </div>
-                                        <div className="pet-card-details">
-                                            <div className="pet-card-detail-item"><span className="pet-card-detail-label">Tipo:</span> <span>{pet.type === 'dog' ? 'Cão' : 'Gato'}</span></div>
-                                            <div className="pet-card-detail-item"><span className="pet-card-detail-label">Sexo:</span> <span>{pet.gender === 'male' ? 'Macho' : 'Fêmea'}</span></div>
-                                            <div className="pet-card-detail-item"><span className="pet-card-detail-label">Descrição:</span> <span>{pet.description}</span></div>
-                                        </div>
-                                        <div className="pet-card-actions">
-                                            <div className="pet-card-badge">
-                                                <span className="adoption-badge">{petAdoptions.length} adoção{petAdoptions.length !== 1 ? 'es' : ''}</span>
+                                        
+                                        <div className="pet-info-grid">
+                                            <div className="info-item">
+                                                <span className="label">Raça</span>
+                                                <span className="value">{pet.breed}</span>
                                             </div>
-                                            <button onClick={() => setExpandedPetId(expandedPetId === pet.id ? null : pet.id)} className="pet-card-expand-button">
-                                                <span>{expandedPetId === pet.id ? 'Ocultar' : 'Ver'} histórico</span>
-                                                <ChevronDown className={`pet-card-expand-icon ${expandedPetId === pet.id ? 'rotated' : ''}`} />
+                                            <div className="info-item">
+                                                <span className="label">Idade</span>
+                                                <span className="value">{pet.age}</span>
+                                            </div>
+                                            <div className="info-item">
+                                                <span className="label">Sexo</span>
+                                                <span className="value">{pet.gender === 'male' ? 'Macho' : 'Fêmea'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="pet-description">
+                                            <p>{pet.description}</p>
+                                        </div>
+
+                                        <div className="pet-card-footer">
+                                            <div className="adoption-count">
+                                                <Users size={16} />
+                                                <span>{petAdoptions.length} solicitações</span>
+                                            </div>
+                                            <button 
+                                                className={`expand-btn ${isExpanded ? 'active' : ''}`}
+                                                onClick={() => setExpandedPetId(isExpanded ? null : pet.id)}
+                                            >
+                                                {isExpanded ? 'Ocultar Histórico' : 'Ver Histórico'}
+                                                <ChevronDown size={18} />
                                             </button>
                                         </div>
                                     </div>
-
-                                    {expandedPetId === pet.id && (
-                                        <div className="pet-card-history">
-                                            <p className="pet-card-history-title">Histórico de Adoções:</p>
-                                            {petAdoptions.length > 0 ? (
-                                                petAdoptions.map((adoption, index) => (
-                                                    <div key={adoption.id || index} className="pet-card-history-item">
-                                                        <p style={{ margin: 0 }}>
-                                                            <span className="pet-card-history-item-name">{adoption.nome}</span> - {adoption.telefone}
-                                                        </p>
-                                                        <p style={{ margin: 0 }}>
-                                                            <strong>Moradia:</strong> {adoption.moradia} ({adoption.condicao})
-                                                        </p>
-                                                        <p style={{ margin: 0 }}>
-                                                            <strong>Residentes:</strong> {adoption.pessoas}
-                                                        </p>
-                                                        <p style={{ margin: 0 }}>
-                                                            <strong>Motivo:</strong> {adoption.motivo}
-                                                        </p>
-                                                        <p style={{ margin: 0 }}>
-                                                            <strong>Status:</strong> {adoption.status || 'Pendente'}
-                                                        </p>
-                                                        {adoption.criadoEm && (
-                                                            <p style={{ margin: 0 }}>
-                                                                <strong>Solicitado em:</strong> {new Date(adoption.criadoEm).toLocaleDateString('pt-BR')}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <p className="pet-card-no-history">Nenhuma adoção registrada</p>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
-                            );
-                        })}
-                    </div>
+
+                                {isExpanded && (
+                                    <div className="pet-history-section">
+                                        <h4><Info size={18} /> Histórico de Solicitações</h4>
+                                        {petAdoptions.length > 0 ? (
+                                            <div className="adoptions-list">
+                                                {petAdoptions.map((adoption, idx) => (
+                                                    <div key={adoption.id || idx} className="adoption-item-card">
+                                                        <div className="adoption-item-header">
+                                                            <div className="adopter-main-info">
+                                                                <strong>{adoption.solicitante?.nomeCompleto}</strong>
+                                                                <span>{adoption.solicitante?.telefone}</span>
+                                                            </div>
+                                                            <span className={`status-pill ${adoption.status}`}>{adoption.status}</span>
+                                                        </div>
+                                                        
+                                                        <div className="adoption-details-grid">
+                                                            <div className="detail-col">
+                                                                <p><strong>Moradia:</strong> {adoption.solicitante?.tipoMoradia} ({adoption.solicitante?.condicaoImovel})</p>
+                                                                <p><strong>Residentes:</strong> {adoption.solicitante?.numeroResidentes} pessoas</p>
+                                                            </div>
+                                                            <div className="detail-col">
+                                                                <p><strong>Data:</strong> {new Date(adoption.criadoEm).toLocaleDateString('pt-BR')}</p>
+                                                                <p><strong>Protocolo:</strong> {adoption.protocolo}</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="adoption-reason">
+                                                            <strong>Motivo da Adoção:</strong>
+                                                            <p>{adoption.motivoAdocao}</p>
+                                                        </div>
+
+                                                        <div className="adoption-item-actions">
+                                                            <button className="whatsapp-btn" onClick={() => handleWhatsApp(adoption.solicitante?.telefone || '', pet.name)}>
+                                                                <MessageCircle size={16} /> Contatar via WhatsApp
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="empty-history">Nenhuma solicitação para este pet.</div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
-                {/* Tabela Inferior */}
-                <div className="adoptions-section">
-                    <h2 className="adoptions-title">Histórico Geral de Adoções</h2>
+                {/* Tabela Geral de Adoções */}
+                <section className="all-adoptions-section">
+                    <div className="section-header">
+                        <h2><Users size={22} /> Registros Gerais de Adoção</h2>
+                        <p>Lista completa de todas as solicitações recebidas no sistema.</p>
+                    </div>
+
                     {adoptions.length > 0 ? (
-                        <div className="adoptions-table-wrapper">
-                            <table className="adoptions-table">
+                        <div className="table-container">
+                            <table className="custom-table">
                                 <thead>
                                     <tr>
-                                        <th>Pet ID</th>
+                                        <th>Pet</th>
                                         <th>Adotante</th>
-                                        <th>Telefone</th>
-                                        <th>Moradia</th>
+                                        <th>Contato</th>
+                                        <th>Data</th>
+                                        <th>Status</th>
                                         <th>Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {adoptions.map((adoption, index) => (
-                                        <tr key={adoption.id || index}>
-                                            <td>#{adoption.idPet}</td>
-                                            <td>{adoption.nome}</td>
-                                            <td>{adoption.telefone}</td>
-                                            <td>{adoption.moradia}</td>
-                                            <td>
-                                                <button className="adoptions-table-action-button" onClick={() => handleWhatsApp(adoption.telefone, 'Pet #' + adoption.idPet)}>
-                                                    <MessageCircle size={16} /> WhatsApp
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {adoptions.map((adoption, index) => {
+                                        const pet = pets.find(p => String(p.id) === String(adoption.idPet));
+                                        return (
+                                            <tr key={adoption.id || index}>
+                                                <td>
+                                                    <div className="table-pet-info">
+                                                        <strong>{pet?.name || `Pet #${adoption.idPet}`}</strong>
+                                                        <span>{pet?.breed || 'N/A'}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="table-adopter-info">
+                                                        <strong>{adoption.solicitante?.nomeCompleto}</strong>
+                                                        <span>{adoption.solicitante?.tipoMoradia}</span>
+                                                    </div>
+                                                </td>
+                                                <td>{adoption.solicitante?.telefone}</td>
+                                                <td>{new Date(adoption.criadoEm).toLocaleDateString('pt-BR')}</td>
+                                                <td>
+                                                    <span className={`status-pill ${adoption.status}`}>{adoption.status}</span>
+                                                </td>
+                                                <td>
+                                                    <button 
+                                                        className="table-whatsapp-btn" 
+                                                        onClick={() => handleWhatsApp(adoption.solicitante?.telefone || '', pet?.name || 'Pet')}
+                                                    >
+                                                        <MessageCircle size={16} /> WhatsApp
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
                     ) : (
-                        <div className="adoptions-empty"><p>Nenhum registro encontrado.</p></div>
+                        <div className="empty-table-state">
+                            <p>Nenhum registro de adoção encontrado no sistema.</p>
+                        </div>
                     )}
-                </div>
+                </section>
             </main>
         </div>
     );
