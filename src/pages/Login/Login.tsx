@@ -1,13 +1,16 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // importar aqui
 import './Login.css';
 
-export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }) {
+export default function Login() {
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Formatar CPF com máscara XXX.XXX.XXX-XX
+  const navigate = useNavigate(); // hook para navegação
+
+  // Funções auxiliares
   const formatCPF = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
     if (cleaned.length <= 3) return cleaned;
@@ -16,15 +19,8 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9, 11)}`;
   };
 
-  // Validar formato de CPF
-  const isValidCPFFormat = (value: string): boolean => {
-    const cleaned = value.replace(/\D/g, '');
-    return cleaned.length === 11;
-  };
-
   const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    setCpf(formatted);
+    setCpf(formatCPF(e.target.value));
     setError('');
   };
 
@@ -37,7 +33,7 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
     e.preventDefault();
     setError('');
 
-    if (!isValidCPFFormat(cpf)) {
+    if (cpf.replace(/\D/g, '').length !== 11) {
       setError('CPF inválido. Use o formato XXX.XXX.XXX-XX');
       return;
     }
@@ -52,22 +48,21 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
     try {
       const response = await fetch('http://localhost:3000/api/users/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cpf: cpf.replace(/\D/g, ''), // Enviar apenas números
+          cpf: cpf.replace(/\D/g, ''),
           senha: password
         }),
       });
 
       const result = await response.json();
 
-      if (result.success) {
-        // Armazenar informações do funcionário
-        localStorage.setItem('employee', JSON.stringify(result.employee));
+      if (result.sucesso) {
+        localStorage.setItem('employee', JSON.stringify(result.dados));
         localStorage.setItem('isAuthenticated', 'true');
-        onLoginSuccess();
+
+        // redireciona para a página de pets
+        navigate('/pets');
       } else {
         setError(result.error || 'Erro ao fazer login');
       }
