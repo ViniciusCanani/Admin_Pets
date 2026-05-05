@@ -264,29 +264,28 @@ export default function Pets() {
                                         </div>
                                     </div>
 
-                                    {/* Adoption Badge */}
-                                    <div className="pet-card-badge">
-                                        <span className="adoption-badge">
-                                            {adoptionCount} adoção
-                                            {adoptionCount !== 1 ? 'ões' : ''}
-                                        </span>
-                                    </div>
+                                    <div className="pet-card-actions">
+                                        <div className="pet-card-badge">
+                                            <span className="adoption-badge">
+                                                {adoptionCount} adoção{adoptionCount !== 1 ? 'es' : ''}
+                                            </span>
+                                        </div>
 
-                                    {/* Expandable Details */}
-                                    <button
-                                        onClick={() =>
-                                            setExpandedPetId(expandedPetId === pet.id ? null : pet.id)
-                                        }
-                                        className="pet-card-expand-button"
-                                    >
-                                        <span>
-                                            {expandedPetId === pet.id ? 'Ocultar' : 'Ver'} histórico
-                                        </span>
-                                        <ChevronDown
-                                            className={`pet-card-expand-icon ${expandedPetId === pet.id ? 'rotated' : ''
-                                                }`}
-                                        />
-                                    </button>
+                                        <button
+                                            onClick={() =>
+                                                setExpandedPetId(expandedPetId === pet.id ? null : pet.id)
+                                            }
+                                            className="pet-card-expand-button"
+                                        >
+                                            <span>
+                                                {expandedPetId === pet.id ? 'Ocultar' : 'Ver'} histórico
+                                            </span>
+                                            <ChevronDown
+                                                className={`pet-card-expand-icon ${expandedPetId === pet.id ? 'rotated' : ''
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
 
                                     {/* Expanded History */}
                                     {expandedPetId === pet.id && (
