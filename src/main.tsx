@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import Login from './pages/Login/Login.tsx'
+import Pets from './pages/Pets/Pets.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Login />
+    <Pets />
   </StrictMode>,
 )
