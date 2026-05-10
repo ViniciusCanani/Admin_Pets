@@ -133,7 +133,7 @@ export default function Pets() {
             <aside className="sidebar">
                 <div className="sidebar-logo">
                     <PawPrint size={32} className="logo-icon" />
-                    <span>PetAdopt Admin</span>
+                    <span>PetLove Admin</span>
                 </div>
                 
                 <nav className="sidebar-nav">
